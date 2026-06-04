@@ -4,4 +4,4 @@
 INSERT INTO rol (nombre) VALUES ('ADMIN');
 INSERT INTO rol (nombre) VALUES ('EMPLEADO');
 INSERT INTO rol (nombre) VALUES ('CLIENTE');
-INSERT INTO rol (nombre) VALUES ('GERENTE');');
+INSERT INTO rol (nombre) VALUES ('GERENTE');
