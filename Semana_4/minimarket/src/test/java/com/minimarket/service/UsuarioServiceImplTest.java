@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -83,6 +84,21 @@ public class UsuarioServiceImplTest {
         assertTrue(resultado.isPresent());
         assertEquals("cliente_1", resultado.get().getUsername());
         verify(usuarioRepository).findById(1L);
+    }
+
+    @Test
+    public void testEncontrarTodosLosUsuarios() {
+        // Arrange
+        when(usuarioRepository.findAll()).thenReturn(List.of(usuario));
+
+        // Act
+        List<Usuario> resultado = usuarioService.findAll();
+
+        // Assert
+        assertNotNull(resultado);
+        assertFalse(resultado.isEmpty());
+        assertEquals(1, resultado.size());
+        verify(usuarioRepository).findAll();
     }
 
 
