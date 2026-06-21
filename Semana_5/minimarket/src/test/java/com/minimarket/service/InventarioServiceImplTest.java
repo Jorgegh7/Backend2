@@ -147,5 +147,35 @@ public class InventarioServiceImplTest {
         verify(inventarioRepository).findById(1L);
     }
 
+    @Test
+    public void guardarInventarioConTipoMovimientoNuloTest(){
+        //Arrange
+        inventario.setTipoMovimiento(null);
+
+        //Act & Assert
+        assertThrows(RuntimeException.class, () -> inventarioService.save(inventario));
+        verify(inventarioRepository, never()).save(inventario);
+    }
+
+    @Test
+    public void guardarInventarioConTipoMovimientoVacioTest(){
+        //Arrange
+        inventario.setTipoMovimiento("");
+
+        //Act & Assert
+        assertThrows(RuntimeException.class, () -> inventarioService.save(inventario));
+        verify(inventarioRepository, never()).save(inventario);
+    }
+
+    @Test
+    public void guardarInventarioConCantidadNulaTest(){
+        //Arrange
+        inventario.setCantidad(null);
+
+        //Act & Assert
+        assertThrows(RuntimeException.class, () -> inventarioService.save(inventario));
+        verify(inventarioRepository, never()).save(inventario);
+    }
+
 
 }

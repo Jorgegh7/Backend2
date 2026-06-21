@@ -36,6 +36,13 @@ public class InventarioServiceImpl implements InventarioService {
         Integer cantidad = inventario.getCantidad();
         String tipoMovimiento = inventario.getTipoMovimiento();
 
+        if (inventario.getTipoMovimiento() == null || inventario.getTipoMovimiento().isBlank()) {
+            throw new RuntimeException("El tipo de movimiento no puede ser nulo ni vacío");
+        }
+        if (inventario.getCantidad() == null) {
+            throw new RuntimeException("La cantidad no puede ser nula");
+        }
+
         if(productoService.findById(producto.getId()) == null){
             throw new RuntimeException("El producto no ha sido encontrado");
         }
