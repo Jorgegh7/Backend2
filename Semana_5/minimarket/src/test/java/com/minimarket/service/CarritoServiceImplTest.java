@@ -140,6 +140,23 @@ public class CarritoServiceImplTest {
     }
 
     @Test
+    public void guardarCarritoConUsuarioCorrectoTest(){
+        //Arrange
+        when(usuarioService.findById(carrito.getUsuario().getId())).thenReturn(Optional.of(usuario));
+        when(productoService.findById(carrito.getProducto().getId())).thenReturn(producto);
+        when(carritoRepository.save(carrito)).thenReturn(carrito);
+
+        //Act
+        Carrito respuesta = carritoService.save(carrito);
+
+        //Assert
+        assertNotNull(respuesta.getUsuario());
+        assertEquals(usuario.getId(), respuesta.getUsuario().getId());
+        assertEquals("user", respuesta.getUsuario().getUsername());
+        verify(usuarioService).findById(carrito.getUsuario().getId());
+    }
+
+    @Test
     public void encontrarCarritosPorUsuarioIdTest(){
         //Arrange
         when(carritoRepository.findByUsuarioId(1L)).thenReturn(List.of(carrito));
