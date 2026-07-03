@@ -1,8 +1,12 @@
 package com.minimarket.service.impl;
 
 import com.minimarket.entity.Carrito;
+import com.minimarket.entity.Producto;
+import com.minimarket.entity.Usuario;
 import com.minimarket.repository.CarritoRepository;
 import com.minimarket.service.CarritoService;
+import com.minimarket.service.ProductoService;
+import com.minimarket.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +17,12 @@ public class CarritoServiceImpl implements CarritoService {
 
     @Autowired
     private CarritoRepository carritoRepository;
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private ProductoService productoService;
 
     @Override
     public List<Carrito> findAll() {
@@ -26,6 +36,13 @@ public class CarritoServiceImpl implements CarritoService {
 
     @Override
     public Carrito save(Carrito carrito) {
+        Usuario usuario = usuarioService.findById(carrito.getUsuario().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Producto producto = productoService.findById(carrito.getProducto().getId());
+
+        carrito.setUsuario(usuario);
+        carrito.setProducto(producto);
+
         return carritoRepository.save(carrito);
     }
 
