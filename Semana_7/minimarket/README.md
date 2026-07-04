@@ -199,6 +199,63 @@ mvn clean test
 
 ---
 
+## Documentación de la API con Swagger
+
+El proyecto expone su documentación de API mediante **springdoc-openapi**, generada automáticamente a partir de las anotaciones presentes en los controladores.
+
+### Iniciar el proyecto
+
+```bash
+mvn spring-boot:run
+```
+
+O bien, ejecutar la clase `MinimarketApplication` directamente desde el IDE.
+
+Por defecto, la aplicación queda disponible en:
+
+```text
+http://localhost:8080
+```
+
+### Acceder a Swagger UI
+
+Con la aplicación en ejecución, abrir en el navegador:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+Desde ahí es posible visualizar todos los endpoints documentados, agrupados por controlador (Productos, Carritos, Usuarios, Inventario, Ventas), junto con sus parámetros, ejemplos de request y posibles códigos de respuesta.
+
+### Especificación OpenAPI en formato JSON
+
+```text
+http://localhost:8080/v3/api-docs
+```
+
+Este archivo puede exportarse e importarse en herramientas externas como Postman para pruebas adicionales.
+
+### Autenticación para probar endpoints protegidos
+
+Dado que el proyecto utiliza **Spring Security con autenticación basada en sesión (formLogin)**, para probar endpoints protegidos por rol desde Swagger UI es necesario iniciar sesión primero:
+
+1. Abrir `http://localhost:8080/login` en el navegador.
+2. Ingresar las credenciales del usuario de prueba (ver tabla abajo).
+3. Sin cerrar la sesión, navegar a Swagger UI en la misma pestaña.
+4. Los endpoints protegidos por rol ya podrán ejecutarse correctamente desde la interfaz.
+
+**Usuario de prueba (cargado automáticamente vía `data.sql`):**
+
+| Campo     | Valor      |
+| --------- | ---------- |
+| Username  | `admin`    |
+| Password  | `admin123` |
+| Rol       | `ADMIN`    |
+
+> **Nota:** al utilizar H2 en memoria, los datos (incluyendo el usuario de prueba) se reinician en cada arranque de la aplicación y se recargan automáticamente desde `data.sql`.
+
+---
+
 ## Reporte de cobertura
 
 El proyecto utiliza **JaCoCo** para generar reportes de cobertura.
