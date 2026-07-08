@@ -15,12 +15,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/carrito")
@@ -39,8 +44,18 @@ public class CarritoController {
     @Operation(summary = "Listar Carritos", description = "Obtiene una lista con todos los Carritos")
     @ApiResponse(responseCode = "200", description = "Listado obtenido de forma correcta")
     @GetMapping
-    public List<Carrito> listarCarrito() {
-        return carritoService.findAll();
+    public CollectionModel<EntityModel<Carrito>> listarCarrito() {
+        List<EntityModel<Carrito>> carritos = carritoService.findAll().stream()
+                .map(carrito -> {
+                    EntityModel<Carrito> recurso = EntityModel.of(carrito);
+                    recurso.add(linkTo(methodOn(CarritoController.class)
+                            .obtenerCarritoPorId(carrito.getId())).withSelfRel());
+                    return recurso;
+                })
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(carritos,
+                linkTo(methodOn(CarritoController.class).listarCarrito()).withSelfRel());
     }
 
     @Operation(summary = "Retorna Carrito por ID", description = "Obtiene un carrito segun su ID")
@@ -64,7 +79,7 @@ public class CarritoController {
             @ApiResponse(responseCode = "400", description = "Datos invalidos", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping
-    public ResponseEntity<Carrito> agregarProductoAlCarrito(@RequestBody Carrito carrito) {
+    public ResponseEntity<EntityModel<Carrito>> agregarProductoAlCarrito(@RequestBody Carrito carrito) {
         Usuario usuario = usuarioService.findById(carrito.getUsuario().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         Producto producto = productoService.findById(carrito.getProducto().getId());
@@ -73,7 +88,14 @@ public class CarritoController {
         carrito.setProducto(producto);
 
         Carrito carritoGuardado = carritoService.save(carrito);
-        return ResponseEntity.status(HttpStatus.CREATED).body(carritoGuardado);
+
+        EntityModel<Carrito> recurso = EntityModel.of(carritoGuardado);
+        recurso.add(linkTo(methodOn(CarritoController.class)
+                .obtenerCarritoPorId(carritoGuardado.getId())).withSelfRel());
+        recurso.add(linkTo(methodOn(CarritoController.class)
+                .listarCarrito()).withRel("lista-carritos"));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }
 
     @Operation(summary = "Actualizar Carrito", description = "Actualiza un Carrito accediendo a este por su ID.")

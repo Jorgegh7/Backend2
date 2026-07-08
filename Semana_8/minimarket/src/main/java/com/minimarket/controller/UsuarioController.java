@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,10 @@ import org.springframework.web.bind.annotation.*;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -32,8 +35,16 @@ public class UsuarioController {
     @Operation(summary = "Listar Usuarios", description = "Obtiene una lista con todos los Usuarios")
     @ApiResponse(responseCode = "200", description = "Listado obtenido de forma correcta")
     @GetMapping
-    public List<Usuario> listarUsuarios() {
-        return usuarioService.findAll();
+    public CollectionModel<EntityModel<Usuario>> listarUsuarios() {
+        List<EntityModel<Usuario>> usuarios = usuarioService.findAll().stream()
+                .map(usuario -> {
+                    EntityModel<Usuario> recurso = EntityModel.of(usuario);
+                    recurso.add(linkTo(methodOn(UsuarioController.class)
+                            .obtenerUsuarioPorId(usuario.getId())).withSelfRel());
+                    return recurso;
+                }).collect(Collectors.toList());
+        return CollectionModel.of(usuarios,
+                linkTo(methodOn(UsuarioController.class).listarUsuarios()).withSelfRel());
     }
 
     @Operation(summary = "Retorna Usuario por ID", description = "Obtiene un Usuario segun su ID")
@@ -71,9 +82,16 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", description = "Datos invalidos", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping
-    public ResponseEntity<Usuario> guardarUsuario(@RequestBody Usuario usuario) {
+    public ResponseEntity<EntityModel<Usuario>> guardarUsuario(@RequestBody Usuario usuario) {
         Usuario usuarioGuardado = usuarioService.save(usuario);
-        return ResponseEntity.status(HttpStatus.CREATED).body(usuarioGuardado);
+
+        EntityModel<Usuario> recurso = EntityModel.of(usuarioGuardado);
+        recurso.add(linkTo(methodOn(UsuarioController.class)
+                .obtenerUsuarioPorId(usuarioGuardado.getId())).withSelfRel());
+        recurso.add(linkTo(methodOn(UsuarioController.class)
+                .listarUsuarios()).withRel("lista-usuarios"));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }
 
     @Operation(summary = "Actualizar Usuario", description = "Actualiza un Usuario accediendo a este por su ID.")

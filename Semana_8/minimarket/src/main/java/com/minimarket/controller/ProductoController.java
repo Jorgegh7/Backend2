@@ -82,10 +82,16 @@ public class ProductoController {
             @ApiResponse(responseCode = "403", description = "El usuario no tiene rol ADMIN")
     })
     @PostMapping
-    public ResponseEntity<Producto> guardarProducto(@RequestBody Producto producto, Authentication authentication) {
+    public ResponseEntity<EntityModel<Producto>> guardarProducto(@RequestBody Producto producto, Authentication authentication) {
         Usuario usuario = obtenerUsuarioAutenticado(authentication);
         Producto productoGuardado = productoService.guardarComoAdministrador(producto, usuario);
-        return ResponseEntity.status(HttpStatus.CREATED).body(productoGuardado);
+
+        EntityModel<Producto> recurso = EntityModel.of(productoGuardado);
+        recurso.add(linkTo(methodOn(ProductoController.class)
+                .obtenerProductoPorId(productoGuardado.getId())).withSelfRel());
+        recurso.add(linkTo(methodOn(ProductoController.class)
+                .listarProductos()).withRel("lista-productos"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }
 
     @Operation(summary = "Actualizar Producto", description = "Actualiza un producto accediendo a este por su ID. Requiere rol ADMIN.")
