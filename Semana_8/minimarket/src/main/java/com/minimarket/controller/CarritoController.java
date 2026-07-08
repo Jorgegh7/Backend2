@@ -1,7 +1,11 @@
 package com.minimarket.controller;
 
 import com.minimarket.entity.Carrito;
+import com.minimarket.entity.Producto;
+import com.minimarket.entity.Usuario;
 import com.minimarket.service.CarritoService;
+import com.minimarket.service.ProductoService;
+import com.minimarket.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +29,12 @@ public class CarritoController {
 
     @Autowired
     private CarritoService carritoService;
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private ProductoService productoService;
 
     @Operation(summary = "Listar Carritos", description = "Obtiene una lista con todos los Carritos")
     @ApiResponse(responseCode = "200", description = "Listado obtenido de forma correcta")
@@ -55,6 +65,13 @@ public class CarritoController {
     })
     @PostMapping
     public ResponseEntity<Carrito> agregarProductoAlCarrito(@RequestBody Carrito carrito) {
+        Usuario usuario = usuarioService.findById(carrito.getUsuario().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Producto producto = productoService.findById(carrito.getProducto().getId());
+
+        carrito.setUsuario(usuario);
+        carrito.setProducto(producto);
+
         Carrito carritoGuardado = carritoService.save(carrito);
         return ResponseEntity.status(HttpStatus.CREATED).body(carritoGuardado);
     }

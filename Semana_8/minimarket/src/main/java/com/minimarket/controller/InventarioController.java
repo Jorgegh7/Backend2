@@ -1,7 +1,9 @@
 package com.minimarket.controller;
 
 import com.minimarket.entity.Inventario;
+import com.minimarket.entity.Producto;
 import com.minimarket.service.InventarioService;
+import com.minimarket.service.ProductoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -24,6 +26,9 @@ public class InventarioController {
 
     @Autowired
     private InventarioService inventarioService;
+
+    @Autowired
+    private ProductoService productoService;
 
     @Operation(summary = "Listar Movimientos Inventario", description = "Obtiene una lista con todos los Movimientos de Inventario")
     @ApiResponse(responseCode = "200", description = "Listado obtenido de forma correcta")
@@ -54,6 +59,9 @@ public class InventarioController {
     })
     @PostMapping
     public ResponseEntity<Inventario> registrarMovimiento(@RequestBody Inventario inventario) {
+        Producto producto = productoService.findById(inventario.getProducto().getId());
+        inventario.setProducto(producto);
+
         Inventario inventarioGuardado = inventarioService.save(inventario);
         return ResponseEntity.status(HttpStatus.CREATED).body(inventarioGuardado);
     }
