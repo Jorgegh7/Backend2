@@ -2,6 +2,7 @@ package com.minimarket.controller;
 
 import com.minimarket.entity.Producto;
 import com.minimarket.entity.Usuario;
+import com.minimarket.hateoas.ProductoModelAssembler;
 import com.minimarket.service.ProductoService;
 import com.minimarket.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,11 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -37,6 +33,9 @@ public class ProductoController {
     @Autowired
     private UsuarioService usuarioService;
 
+    @Autowired
+    private ProductoModelAssembler assembler;
+
     @Operation(summary = "Listar Productos", description = "Obtiene una lista con todos los productos")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado obtenido de forma correcta"),
@@ -44,21 +43,7 @@ public class ProductoController {
     })
     @GetMapping
     public CollectionModel<EntityModel<Producto>> listarProductos() {
-        List<EntityModel<Producto>> productos = productoService.findAll().stream()
-                .map(producto -> {
-                    EntityModel<Producto> recurso = EntityModel.of(producto);
-                    recurso.add(linkTo(methodOn(ProductoController.class)
-                            .obtenerProductoPorId(producto.getId())).withSelfRel());
-                    recurso.add(linkTo(methodOn(ProductoController.class)
-                            .actualizarProducto(producto.getId(), producto, null)).withRel("actualizar"));
-                    recurso.add(linkTo(methodOn(ProductoController.class)
-                            .eliminarProducto(producto.getId(), null)).withRel("eliminar"));
-                    return recurso;
-                })
-                .collect(Collectors.toList());
-
-        return CollectionModel.of(productos,
-                linkTo(methodOn(ProductoController.class).listarProductos()).withSelfRel());
+        return assembler.toCollectionModel(productoService.findAll());
     }
 
     @Operation(summary = "Listar Producto", description = "Obtiene un producto por su ID")
@@ -90,16 +75,7 @@ public class ProductoController {
         Usuario usuario = obtenerUsuarioAutenticado(authentication);
         Producto productoGuardado = productoService.guardarComoAdministrador(producto, usuario);
 
-        EntityModel<Producto> recurso = EntityModel.of(productoGuardado);
-        recurso.add(linkTo(methodOn(ProductoController.class)
-                .obtenerProductoPorId(productoGuardado.getId())).withSelfRel());
-        recurso.add(linkTo(methodOn(ProductoController.class)
-                .listarProductos()).withRel("lista-productos"));
-        recurso.add(linkTo(methodOn(ProductoController.class)
-                .actualizarProducto(productoGuardado.getId(), productoGuardado, null)).withRel("actualizar"));
-        recurso.add(linkTo(methodOn(ProductoController.class)
-                .eliminarProducto(productoGuardado.getId(), null)).withRel("eliminar"));
-        return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
+        return ResponseEntity.status(HttpStatus.CREATED).body(assembler.toModel(productoGuardado));
     }
 
     @Operation(summary = "Actualizar Producto", description = "Actualiza un producto accediendo a este por su ID. Requiere rol ADMIN.")

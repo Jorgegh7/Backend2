@@ -45,8 +45,6 @@ Este proyecto extiende la base de **MiniMarketPlus** (con autenticación, autori
 
 Cada endpoint está anotado con `@Operation` y `@ApiResponses`, especificando resumen, descripción y códigos de respuesta (`200`, `201`, `400`, `403`, `404`) según el comportamiento real del controlador. Los métodos `POST` incluyen además ejemplos de request mediante `@ExampleObject`.
 
-Los endpoints marcados con HATEOAS incluyen dos tipos de enlaces en sus respuestas: enlaces de **navegación** (`self`, apuntando al propio recurso, y `lista-{entidad}`, apuntando a la colección completa) y enlaces de **acción** (`actualizar` y `eliminar`, apuntando a los endpoints `PUT` y `DELETE` disponibles sobre ese mismo recurso), permitiendo que el cliente descubra dinámicamente qué operaciones puede ejecutar sin necesidad de conocerlas de antemano.
-
 ---
 
 ## Ejecución del proyecto
@@ -112,18 +110,12 @@ Respuesta de `GET /api/usuarios/1`:
     },
     "lista-usuarios": {
       "href": "http://localhost:8080/api/usuarios"
-    },
-    "actualizar": {
-      "href": "http://localhost:8080/api/usuarios/1"
-    },
-    "eliminar": {
-      "href": "http://localhost:8080/api/usuarios/1"
     }
   }
 }
 ```
 
-Cada recurso individual incluye un enlace `self` hacia sí mismo, un enlace `lista-usuarios` hacia la colección completa, y enlaces de acción (`actualizar`, `eliminar`) que apuntan a las operaciones `PUT` y `DELETE` disponibles sobre ese mismo recurso, permitiendo al cliente navegar y operar sobre la API sin necesidad de construir URLs manualmente ni conocer de antemano qué acciones están disponibles.
+Cada recurso individual incluye un enlace `self` hacia sí mismo, y un enlace relacionado hacia la colección completa, permitiendo al cliente navegar la API sin necesidad de construir URLs manualmente.
 
 ---
 
