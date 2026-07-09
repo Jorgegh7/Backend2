@@ -3,6 +3,7 @@ package com.minimarket.controller;
 import com.minimarket.entity.Carrito;
 import com.minimarket.entity.Producto;
 import com.minimarket.entity.Usuario;
+import com.minimarket.hateoas.CarritoModelAssembler;
 import com.minimarket.service.CarritoService;
 import com.minimarket.service.ProductoService;
 import com.minimarket.service.UsuarioService;
@@ -21,11 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/carrito")
@@ -41,25 +37,14 @@ public class CarritoController {
     @Autowired
     private ProductoService productoService;
 
+    @Autowired
+    private CarritoModelAssembler assembler;
+
     @Operation(summary = "Listar Carritos", description = "Obtiene una lista con todos los Carritos")
     @ApiResponse(responseCode = "200", description = "Listado obtenido de forma correcta")
     @GetMapping
     public CollectionModel<EntityModel<Carrito>> listarCarrito() {
-        List<EntityModel<Carrito>> carritos = carritoService.findAll().stream()
-                .map(carrito -> {
-                    EntityModel<Carrito> recurso = EntityModel.of(carrito);
-                    recurso.add(linkTo(methodOn(CarritoController.class)
-                            .obtenerCarritoPorId(carrito.getId())).withSelfRel());
-                    recurso.add(linkTo(methodOn(CarritoController.class)
-                            .actualizarCarrito(carrito.getId(), carrito)).withRel("actualizar"));
-                    recurso.add(linkTo(methodOn(CarritoController.class)
-                            .eliminarProductoDelCarrito(carrito.getId())).withRel("eliminar"));
-                    return recurso;
-                })
-                .collect(Collectors.toList());
-
-        return CollectionModel.of(carritos,
-                linkTo(methodOn(CarritoController.class).listarCarrito()).withSelfRel());
+        return assembler.toCollectionModel(carritoService.findAll());
     }
 
     @Operation(summary = "Retorna Carrito por ID", description = "Obtiene un carrito segun su ID")
@@ -93,17 +78,7 @@ public class CarritoController {
 
         Carrito carritoGuardado = carritoService.save(carrito);
 
-        EntityModel<Carrito> recurso = EntityModel.of(carritoGuardado);
-        recurso.add(linkTo(methodOn(CarritoController.class)
-                .obtenerCarritoPorId(carritoGuardado.getId())).withSelfRel());
-        recurso.add(linkTo(methodOn(CarritoController.class)
-                .listarCarrito()).withRel("lista-carritos"));
-        recurso.add(linkTo(methodOn(CarritoController.class)
-                .actualizarCarrito(carritoGuardado.getId(), carritoGuardado)).withRel("actualizar"));
-        recurso.add(linkTo(methodOn(CarritoController.class)
-                .eliminarProductoDelCarrito(carritoGuardado.getId())).withRel("eliminar"));
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
+        return ResponseEntity.status(HttpStatus.CREATED).body(assembler.toModel(carritoGuardado));
     }
 
     @Operation(summary = "Actualizar Carrito", description = "Actualiza un Carrito accediendo a este por su ID.")

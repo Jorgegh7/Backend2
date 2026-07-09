@@ -9,7 +9,7 @@ Backend desarrollado en **Java con Spring Boot** para la gestión de un minimark
 Este proyecto extiende la base de **MiniMarketPlus** (con autenticación, autorización por roles y pruebas unitarias) agregando dos capas adicionales:
 
 * **OpenAPI/Swagger**: documentación interactiva y autogenerada de los endpoints REST.
-* **HATEOAS**: enlaces dinámicos (`_links`) en las respuestas JSON que permiten al cliente navegar entre recursos relacionados sin necesidad de conocer las URLs de antemano.
+* **HATEOAS**: enlaces dinámicos (`_links`) en las respuestas JSON que permiten al cliente navegar entre recursos relacionados y descubrir las acciones disponibles sobre cada recurso, sin necesidad de conocer las URLs de antemano.
 
 ---
 
@@ -67,6 +67,8 @@ http://localhost:8080
 http://localhost:8080/swagger-ui/index.html
 ```
 
+El título, versión y descripción mostrados en Swagger UI se personalizan mediante la clase `OpenApiConfig` (`@Configuration` + bean `OpenAPI`), en lugar de usar el nombre genérico del proyecto.
+
 ### Especificación OpenAPI en formato JSON
 
 ```text
@@ -96,26 +98,130 @@ El proyecto utiliza **Spring Security con autenticación basada en sesión (form
 
 ---
 
-## Ejemplo de respuesta con HATEOAS
+## Implementación de HATEOAS
 
-Respuesta de `GET /api/usuarios/1`:
+Se implementó HATEOAS sobre los endpoints de listado y registro de las cuatro entidades principales, utilizando `EntityModel` (recurso individual) y `CollectionModel` (colección de recursos), junto con enlaces de navegación (`self`, enlace a la colección) y enlaces de acción (`actualizar`, `eliminar`) que apuntan a las operaciones `PUT` y `DELETE` disponibles sobre cada recurso.
+
+### Ejemplo de respuesta — `EntityModel` con enlaces de navegación y acción
+
+Respuesta de `GET /api/productos/1`:
 
 ```json
 {
   "id": 1,
-  "username": "admin",
+  "nombre": "Leche Entera 1L",
+  "precio": 1200,
+  "stock": 50,
+  "categoria": {
+    "id": 1,
+    "nombre": "Lácteos"
+  },
   "_links": {
     "self": {
-      "href": "http://localhost:8080/api/usuarios/1"
+      "href": "http://localhost:8080/api/productos/1"
     },
-    "lista-usuarios": {
-      "href": "http://localhost:8080/api/usuarios"
+    "lista-productos": {
+      "href": "http://localhost:8080/api/productos"
+    },
+    "actualizar": {
+      "href": "http://localhost:8080/api/productos/1"
+    },
+    "eliminar": {
+      "href": "http://localhost:8080/api/productos/1"
     }
   }
 }
 ```
 
-Cada recurso individual incluye un enlace `self` hacia sí mismo, y un enlace relacionado hacia la colección completa, permitiendo al cliente navegar la API sin necesidad de construir URLs manualmente.
+Los enlaces `self`, `actualizar` y `eliminar` comparten la misma URL, ya que en REST el recurso es el mismo; lo que distingue la acción disponible es el método HTTP asociado a cada enlace (`GET`, `PUT`, `DELETE` respectivamente).
+
+### Ejemplo de respuesta — `CollectionModel`
+
+Respuesta de `GET /api/productos`:
+
+```json
+{
+  "_embedded": {
+    "productoList": [
+      {
+        "id": 1,
+        "nombre": "Leche Entera 1L",
+        "precio": 1200,
+        "stock": 50,
+        "categoria": { "id": 1, "nombre": "Lácteos" },
+        "_links": {
+          "self": { "href": "http://localhost:8080/api/productos/1" },
+          "actualizar": { "href": "http://localhost:8080/api/productos/1" },
+          "eliminar": { "href": "http://localhost:8080/api/productos/1" }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": { "href": "http://localhost:8080/api/productos" }
+  }
+}
+```
+
+Cada elemento dentro de `_embedded` trae sus propios enlaces individuales, mientras que la colección completa trae su enlace `self` general, siguiendo el formato HAL (`application/hal+json`).
+
+---
+
+## Patrón `RepresentationModelAssembler`
+
+Como mejora arquitectónica sobre la implementación manual de HATEOAS (construir los enlaces directamente dentro de cada método del controlador), se incorporó el patrón `RepresentationModelAssembler` de Spring HATEOAS, que centraliza la lógica de construcción de enlaces en una clase dedicada por entidad.
+
+**Ejemplo — `ProductoModelAssembler`:**
+
+```java
+@Component
+public class ProductoModelAssembler implements RepresentationModelAssembler<Producto, EntityModel<Producto>> {
+
+    @Override
+    public EntityModel<Producto> toModel(Producto producto) {
+        return EntityModel.of(producto,
+                linkTo(methodOn(ProductoController.class)
+                        .obtenerProductoPorId(producto.getId())).withSelfRel(),
+                linkTo(methodOn(ProductoController.class)
+                        .listarProductos()).withRel("lista-productos"),
+                linkTo(methodOn(ProductoController.class)
+                        .actualizarProducto(producto.getId(), producto, null)).withRel("actualizar"),
+                linkTo(methodOn(ProductoController.class)
+                        .eliminarProducto(producto.getId(), null)).withRel("eliminar"));
+    }
+
+    @Override
+    public CollectionModel<EntityModel<Producto>> toCollectionModel(Iterable<? extends Producto> entities) {
+        List<EntityModel<Producto>> productos = StreamSupport.stream(entities.spliterator(), false)
+                .map(this::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(productos,
+                linkTo(methodOn(ProductoController.class).listarProductos()).withSelfRel());
+    }
+}
+```
+
+Con el Assembler inyectado, el controlador se simplifica considerablemente:
+
+```java
+@Autowired
+private ProductoModelAssembler assembler;
+
+@GetMapping
+public CollectionModel<EntityModel<Producto>> listarProductos() {
+    return assembler.toCollectionModel(productoService.findAll());
+}
+
+@PostMapping
+public ResponseEntity<EntityModel<Producto>> guardarProducto(@RequestBody Producto producto, Authentication authentication) {
+    Usuario usuario = obtenerUsuarioAutenticado(authentication);
+    Producto productoGuardado = productoService.guardarComoAdministrador(producto, usuario);
+    return ResponseEntity.status(HttpStatus.CREATED).body(assembler.toModel(productoGuardado));
+}
+```
+
+Este patrón se implementó como prueba de concepto en las entidades **Producto**, **Usuario** y **Carrito** (`ProductoModelAssembler`, `UsuarioModelAssembler`, `CarritoModelAssembler`), demostrando el mecanismo de forma funcional. Se recomienda extenderlo a **Inventario** en una futura iteración del proyecto, siguiendo el mismo patrón ya validado.
 
 ---
 
@@ -130,10 +236,18 @@ La documentación fue validada en dos herramientas:
 
 ## Reflexión técnica
 
-La incorporación de OpenAPI y HATEOAS aporta a la calidad del backend en tres aspectos concretos: primero, formaliza el contrato de cada endpoint, exponiendo inconsistencias entre el código y la documentación (como discrepancias entre el código HTTP documentado y el realmente retornado) que de otra forma pasarían desapercibidas. Segundo, mejora la navegabilidad de la API: los enlaces `_links` permiten que un cliente descubra las acciones disponibles sobre un recurso sin depender de documentación externa o de hardcodear rutas, acercando la API al nivel de madurez REST de Richardson. Tercero, favorece la mantenibilidad, ya que la documentación se genera automáticamente desde las anotaciones del código, evitando la desincronización típica de documentación mantenida manualmente.
+La incorporación de OpenAPI y HATEOAS aporta a la calidad del backend en tres aspectos concretos: primero, formaliza el contrato de cada endpoint, exponiendo inconsistencias entre el código y la documentación (como discrepancias entre el código HTTP documentado y el realmente retornado) que de otra forma pasarían desapercibidas. Segundo, mejora la navegabilidad de la API: los enlaces `_links` permiten que un cliente descubra las acciones disponibles sobre un recurso —incluyendo operaciones de modificación y eliminación— sin depender de documentación externa o de hardcodear rutas, acercando la API al nivel de madurez REST de Richardson. Tercero, favorece la mantenibilidad, ya que la documentación se genera automáticamente desde las anotaciones del código, y la construcción de enlaces mediante `RepresentationModelAssembler` centraliza esa lógica evitando su repetición en cada método del controlador.
+
+Esta característica se validó también fuera de Swagger UI, importando la especificación OpenAPI directamente en Postman: al generar la colección desde el spec, cada endpoint conservó su documentación, y al ejecutar las peticiones, las respuestas mostraron los mismos enlaces `_links`/`_embedded` observados en Swagger UI, confirmando que la implementación de HATEOAS no depende de una herramienta específica sino que es parte del contrato real de la API.
+
+**Estrategias para mantener la documentación actualizada:**
+
+1. **Generación automática, nunca manual.** El spec debe generarse desde las anotaciones presentes directamente en el código (`@Operation`, `@Schema`) mediante springdoc-openapi, no escribirse manualmente.
+2. **Versionado explícito de la API.** Se recomienda adoptar versionado por URI (por ejemplo, `/api/v1/productos`), ya que es el enfoque más visible en Swagger UI en comparación con el versionado por header o query param. Así, cuando un endpoint deba cambiar de forma incompatible, se introduce una nueva versión (`/api/v2/...`) sin romper a los clientes que dependen de la anterior.
+3. **Contract testing en el pipeline CI/CD.** Como trabajo futuro, se propone agregar un paso en GitHub Actions que valide que las respuestas reales del backend coincidan con lo prometido en el spec, detectando automáticamente inconsistencias como las corregidas durante este desarrollo.
 
 ---
 
 ## Conclusión
 
-Esta iteración de **MiniMarketPlus** demuestra la integración de OpenAPI/Swagger para documentación estandarizada y Spring HATEOAS para navegabilidad hipermedia, sobre una base ya validada con pruebas unitarias y autenticación por roles. La combinación de ambas herramientas, validada tanto en Swagger UI como en Postman, permite exponer una API REST autodescriptiva y consistente con los estándares OAS.
+Esta iteración de **MiniMarketPlus** demuestra la integración de OpenAPI/Swagger para documentación estandarizada y Spring HATEOAS para navegabilidad hipermedia —incluyendo enlaces de acción y el patrón `RepresentationModelAssembler`— sobre una base ya validada con pruebas unitarias y autenticación por roles. La combinación de ambas herramientas, validada tanto en Swagger UI como en Postman, permite exponer una API REST autodescriptiva y consistente con los estándares OAS.
