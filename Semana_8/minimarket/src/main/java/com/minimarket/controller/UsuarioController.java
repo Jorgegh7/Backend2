@@ -68,6 +68,10 @@ public class UsuarioController {
                 .withSelfRel());
         recurso.add(linkTo(methodOn(UsuarioController.class).listarUsuarios())
                 .withRel("lista-usuarios"));
+        recurso.add(linkTo(methodOn(UsuarioController.class).actualizarUsuario(id, usuario))
+                .withRel("actualizar"));
+        recurso.add(linkTo(methodOn(UsuarioController.class).eliminarUsuario(id))
+                .withRel("eliminar"));
 
         return ResponseEntity.ok(recurso);
     }
@@ -90,6 +94,10 @@ public class UsuarioController {
                 .obtenerUsuarioPorId(usuarioGuardado.getId())).withSelfRel());
         recurso.add(linkTo(methodOn(UsuarioController.class)
                 .listarUsuarios()).withRel("lista-usuarios"));
+        recurso.add(linkTo(methodOn(UsuarioController.class)
+                .actualizarUsuario(usuarioGuardado.getId(), usuarioGuardado)).withRel("actualizar"));
+        recurso.add(linkTo(methodOn(UsuarioController.class)
+                .eliminarUsuario(usuarioGuardado.getId())).withRel("eliminar"));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }

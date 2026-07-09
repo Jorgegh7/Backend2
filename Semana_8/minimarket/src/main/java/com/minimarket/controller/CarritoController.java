@@ -50,6 +50,10 @@ public class CarritoController {
                     EntityModel<Carrito> recurso = EntityModel.of(carrito);
                     recurso.add(linkTo(methodOn(CarritoController.class)
                             .obtenerCarritoPorId(carrito.getId())).withSelfRel());
+                    recurso.add(linkTo(methodOn(CarritoController.class)
+                            .actualizarCarrito(carrito.getId(), carrito)).withRel("actualizar"));
+                    recurso.add(linkTo(methodOn(CarritoController.class)
+                            .eliminarProductoDelCarrito(carrito.getId())).withRel("eliminar"));
                     return recurso;
                 })
                 .collect(Collectors.toList());
@@ -94,6 +98,10 @@ public class CarritoController {
                 .obtenerCarritoPorId(carritoGuardado.getId())).withSelfRel());
         recurso.add(linkTo(methodOn(CarritoController.class)
                 .listarCarrito()).withRel("lista-carritos"));
+        recurso.add(linkTo(methodOn(CarritoController.class)
+                .actualizarCarrito(carritoGuardado.getId(), carritoGuardado)).withRel("actualizar"));
+        recurso.add(linkTo(methodOn(CarritoController.class)
+                .eliminarProductoDelCarrito(carritoGuardado.getId())).withRel("eliminar"));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }

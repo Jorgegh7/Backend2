@@ -44,6 +44,10 @@ public class InventarioController {
                     EntityModel<Inventario> recurso = EntityModel.of(inventario);
                     recurso.add(linkTo(methodOn(InventarioController.class)
                             .obtenerMovimientoPorId(inventario.getId())).withSelfRel());
+                    recurso.add(linkTo(methodOn(InventarioController.class)
+                            .actualizarMovimiento(inventario.getId(), inventario)).withRel("actualizar"));
+                    recurso.add(linkTo(methodOn(InventarioController.class)
+                            .eliminarMovimiento(inventario.getId())).withRel("eliminar"));
                     return recurso;
                 })
                 .collect(Collectors.toList());
@@ -84,6 +88,10 @@ public class InventarioController {
                 .obtenerMovimientoPorId(inventarioGuardado.getId())).withSelfRel());
         recurso.add(linkTo(methodOn(InventarioController.class)
                 .listarMovimientosDeInventario()).withRel("lista-movimientos"));
+        recurso.add(linkTo(methodOn(InventarioController.class)
+                .actualizarMovimiento(inventarioGuardado.getId(), inventarioGuardado)).withRel("actualizar"));
+        recurso.add(linkTo(methodOn(InventarioController.class)
+                .eliminarMovimiento(inventarioGuardado.getId())).withRel("eliminar"));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }

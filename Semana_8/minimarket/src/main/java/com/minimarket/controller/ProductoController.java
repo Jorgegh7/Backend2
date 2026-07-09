@@ -49,6 +49,10 @@ public class ProductoController {
                     EntityModel<Producto> recurso = EntityModel.of(producto);
                     recurso.add(linkTo(methodOn(ProductoController.class)
                             .obtenerProductoPorId(producto.getId())).withSelfRel());
+                    recurso.add(linkTo(methodOn(ProductoController.class)
+                            .actualizarProducto(producto.getId(), producto, null)).withRel("actualizar"));
+                    recurso.add(linkTo(methodOn(ProductoController.class)
+                            .eliminarProducto(producto.getId(), null)).withRel("eliminar"));
                     return recurso;
                 })
                 .collect(Collectors.toList());
@@ -91,6 +95,10 @@ public class ProductoController {
                 .obtenerProductoPorId(productoGuardado.getId())).withSelfRel());
         recurso.add(linkTo(methodOn(ProductoController.class)
                 .listarProductos()).withRel("lista-productos"));
+        recurso.add(linkTo(methodOn(ProductoController.class)
+                .actualizarProducto(productoGuardado.getId(), productoGuardado, null)).withRel("actualizar"));
+        recurso.add(linkTo(methodOn(ProductoController.class)
+                .eliminarProducto(productoGuardado.getId(), null)).withRel("eliminar"));
         return ResponseEntity.status(HttpStatus.CREATED).body(recurso);
     }
 
